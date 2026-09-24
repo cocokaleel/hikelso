@@ -57,6 +57,8 @@ void HiKelso_Controls::TurnOffAllLEDs() {
     for (int i = 0; i < 8; i++) {
         degreeLEDs[i].Write(false);
     }
+    freeLED.Write(false);
+    seqLED.Write(false);
 }
 
 void HiKelso_Controls::Init(DaisySeed *hw) {

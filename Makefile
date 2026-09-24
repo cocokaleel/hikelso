@@ -6,6 +6,7 @@ USE_DAISYSP_LGPL = 1
 # Sources
 CPP_SOURCES += HiKelso.cpp
 CPP_SOURCES += HiKelso_Controls.cpp
+CPP_SOURCES += HiKelso_State.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy

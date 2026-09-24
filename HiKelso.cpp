@@ -1,7 +1,7 @@
 #include "daisy_pod.h"
 #include "daisysp.h"
-#include "HiKelso_Types.h"
 #include "HiKelso_Controls.h"
+#include "HiKelso_State.h"
 // #include "moogladder.h"
 
 using namespace daisy;
@@ -40,8 +40,7 @@ Chord_Flavors       defaultChord[8] = {Maj, Minor, Minor, Maj, Maj, Minor, Dim, 
 int                 root = 48;
 float               tickFrequency;
 HiKelso_Controls    controls;
-Free_State          freePlayState = FREE_CHORD;
-Step_State          seqState = STEP_PAUSE;
+HiKelso_State       state;
 
 bool    editCycle;
 uint8_t seqStep;
@@ -71,7 +70,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     for(size_t i = 0; i < size; i += 2)
     {
         float sig = 0;
-        if (seqState == STEP_EDIT || seqState == STEP_PLAY) {
+        if (state.seq == SEQ_EDIT || state.seq == SEQ_PLAY) {
             NextSamples(sig);
         }
         for(int i = 0; i < 4; i++)
@@ -99,11 +98,9 @@ void InitSynth(float samplerate)
 void InitChords()
 {
     //set thirds
-    for(int i = 0; i < 8; i++)
-    {
-        //every other chord, maj third, Minor third
-        chord[i][THIRD] = 3 + ((i + 1) % 2);
-    }
+    chord[Maj][THIRD] = chord[Maj7][THIRD] = chord[dom7][THIRD] = chord[Aug][THIRD] = 4;
+    chord[Minor][THIRD] = chord[Dim][THIRD] = chord[min7][THIRD] = chord[dim7][THIRD] = 3;
+    
     //set fifths
     // perfect 5th
     chord[Maj][FIFTH] = chord[Minor][FIFTH] = chord[Maj7][FIFTH] = chord[min7][FIFTH] = chord[dom7][FIFTH] = 7;
@@ -170,20 +167,13 @@ int main(void)
     hw.StartLog();
 
     while(1) {
-        if (seqState == STEP_EDIT) {
+        if (state.seq == SEQ_EDIT) {
             controls.ToggleSeqLED();
-            System::Delay(200);
-            hw.PrintLine("seq edit");
+            System::Delay(200); 
         }
-        // else {
-        //     hw.PrintLine("SeqState: %d", seqState);
-        //     System::Delay(200);
-        // } 
-        
-        if (freePlayState == FREE_ROOT) {
+        if (state.free == FREE_ROOT) {
             controls.ToggleFreePlayLED();
             System::Delay(200);
-            hw.PrintLine("free root");
         }
     }
 }
@@ -194,7 +184,7 @@ void UpdateChord()
     chordNum = (joystickSector >= 8 && activeDegree < 8) ? defaultChord[activeDegree] : joystickSector;
 
     // if the joystick is moved during free root playing, change the third, fifth, and seventh to the chord degrees
-    if (freePlayState == FREE_ROOT && joystickSector <= 8) {
+    if (state.free == FREE_ROOT && joystickSector <= 8) {
 
         frequencies[2] = chord[chordNum][THIRD];
         frequencies[4] = chord[chordNum][FIFTH];
@@ -240,12 +230,12 @@ void SetVolumeAndDegree() {
         if (activeButton < 8) {
             controls.SetDegreeLED(activeDegree, true);
             // a button other than the active button is pressed
-            if (freePlayState == FREE_CHORD) {
+            if (state.free == FREE_CHORD) {
                 for(int i = 0; i < 4; i++) // turn on all oscs
                 {
                     osc[i].SetAmp(0.1);
                 }
-            } else if (freePlayState == FREE_ROOT) {
+            } else if (state.free == FREE_ROOT) {
                 osc[0].SetAmp(0.4); // turn on root osc
             }
         } else { // no button is actively pressed
@@ -269,76 +259,35 @@ void ProcessNewInstrumentButton() {
 
 void ProcessMode() {
     if (controls.GetFreePlaySwitchPressed()) {
-        if (freePlayState == FREE_INACTIVE) { // free play pressed from seq mode 
-            controls.TurnOffAllLEDs();
-            freePlayState = FREE_CHORD;
-            controls.SetFreePlayLED(true);
-            hw.PrintLine("free chord!");
-            if (seqState == STEP_EDIT) {
-                hw.PrintLine("seq paused");
-                seqState = STEP_PAUSE;
-            }
-        } else { // free play re-pressed
-            freePlayState = (Free_State)(freePlayState + 1);
-            if (freePlayState == FREE_INACTIVE) {
-                freePlayState = FREE_CHORD;
-                controls.SetFreePlayLED(true);
-            }
-        }
-        if (freePlayState == FREE_CHORD) {
-            frequencies[2] = chord[Maj7][THIRD];
-            frequencies[4] = chord[Maj7][FIFTH];
-            frequencies[6] = chord[Maj7][SEVENTH];
-        }
+        state.UpdateState(FREE_EVENT);
     } else if (controls.GetSeqSwitchPressed()) {
-        seqStep = 0;
+        state.UpdateState(SEQ_EVENT);
+    } else {
+        return;
+    }
 
-        if (freePlayState != FREE_INACTIVE) { // seq mode pressed from free play
-            controls.SetFreePlayLED(false);
-            seqState = STEP_PLAY;
-            freePlayState = FREE_INACTIVE;
-            hw.PrintLine("seq play");
-        } else { // seq mode re-pressed
-            controls.TurnOffAllLEDs();
-            
-            seqState = (Step_State)(seqState + 1);
-            if (seqState >= STEP_MAX) seqState = (Step_State)0;
-
-            switch(seqState) {
-                case STEP_PLAY:
-                    hw.PrintLine("step play");
-                break;
-                case STEP_EDIT:
-                    hw.PrintLine("step edit");
-                break;
-                case STEP_PAUSE:
-                    hw.PrintLine("step paused");
-                break;
-                default:
-                    hw.PrintLine("OH NO");
-                break;
-            }
-        }
-        controls.SetSeqLED(false);
-        if (seqState != STEP_PAUSE) {
-            controls.SetDegreeLED(seqStep, true);
-        }
-        if (seqState != STEP_EDIT) {
-            editCycle = false;
-        } else {
-            editCycle = seqActive[seqStep];
-        }
-        if (seqState == STEP_PLAY) {
-            controls.SetSeqLED(true);
-        }
+    // only if one of the buttons is pressed (implies mode change)
+    controls.TurnOffAllLEDs();
+    editCycle = false;
+    seqStep = 0;
+    if (state.free == FREE_CHORD) {
+        controls.SetFreePlayLED(true);
+    }
+    if (state.seq == SEQ_PLAY) {
+        controls.SetSeqLED(true);
+        controls.SetDegreeLED(seqStep, true);
+    }
+    if (state.seq == SEQ_EDIT) {
+        editCycle = seqActive[seqStep];
+        controls.SetDegreeLED(seqStep, true);
     }
 }
 
 void UpdateSequencerParams() {
-    if (seqState == STEP_EDIT) {
+    if (state.seq == SEQ_EDIT) {
         seqPitches[seqStep] += controls.GetEncoderIncrement();
         seqOsc.SetFreq(mtof(seqPitches[seqStep]));
-    } else if (seqState == STEP_PLAY) {
+    } else if (state.seq == SEQ_PLAY) {
         tickFrequency += controls.GetEncoderIncrement();
         if (tickFrequency < 1) {
             tickFrequency = 1.0;
@@ -351,7 +300,7 @@ void UpdateSequencerParams() {
 void UpdateControls()
 {
     ProcessMode();
-    if (freePlayState!= FREE_INACTIVE) {
+    if (state.free != FREE_INACTIVE) {
         SetVolumeAndDegree();
         UpdateChord();
         // shift root
@@ -365,9 +314,9 @@ void UpdateControls()
             notes[3] = freq + chord[chordNum][2];
         }
     }
-    if (freePlayState == FREE_INACTIVE) {
+    if (state.free == FREE_INACTIVE) {
         UpdateSequencerParams();
-        if (seqState == STEP_EDIT) {
+        if (state.seq == SEQ_EDIT) {
             SetActiveSeqStep();
         }
     }
@@ -383,7 +332,7 @@ void NextSamples(float &sig)
     sig = seqOsc.Process();
     sig = flt.Process(sig);
 
-    if(tick.Process() && seqState == STEP_PLAY)
+    if(tick.Process() && state.seq == SEQ_PLAY)
     {
         controls.SetDegreeLED(seqStep, false);
         seqStep++;
