@@ -58,6 +58,7 @@ class HiKelso_Controls {
         void SetDegreeLED(uint8_t i, bool on);
 
         void TurnOffAllLEDs();
+        void TurnOffDegreeLEDs();
 
         float GetFilterFrequency();
 

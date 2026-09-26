@@ -4,54 +4,22 @@
 #include "HiKelso_State.h"
 #include "FreeChord.h"
 #include "FreeRoot.h"
+#include "Sequencer.h"
 
-// #include "moogladder.h"
 
 using namespace daisy;
 using namespace daisysp;
 using namespace seed;
 
-
-enum Chord_Flavors {
-    Maj, Minor, Aug, Dim,
-    Maj7, min7, dom7,
-    dim7, NUM_CHORDS
-};
-
-enum Chord_Degree {
-    THIRD,
-    FIFTH,
-    SEVENTH,
-    NUM_DEGREES
-};
-
 DaisySeed           hw;
-int                 freq      = 0;
-Oscillator          seqOsc;
-AdEnv               env;
-Metro               tick;
-MoogLadder          flt;
 int                 activeDegree = 8;
-Oscillator          osc[4];
-uint8_t             oscNum;
-int                 notes[4];
-int                 chordNum = 0;
-float               tickFrequency;
+uint8_t             joystickSector;
 HiKelso_Controls    controls;
 HiKelso_State       state;
 FreeChord           chordMachine;
 FreeRoot            rootMachine;
-uint8_t             joystickSector;
+Sequencer           seqMachine;
 
-bool    editCycle;
-uint8_t seqStep;
-uint8_t wave;
-float   dec[8];
-int     seqPitches[8];
-bool    seqActive[8];
-float   env_out;
-
-void NextSamples(float &sig);
 void UpdateControls();
 void ProcessNewInstrumentButton();
 void SetVolumeAndDegree();
@@ -67,7 +35,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     {
         float sig = 0;
         if (state.seq == SEQ_EDIT || state.seq == SEQ_PLAY) {
-            NextSamples(sig);
+            sig += seqMachine.GetSample();
         }
         if (state.free == FREE_CHORD) {
             sig += chordMachine.GetSamples();
@@ -92,34 +60,7 @@ int main(void)
     controls.Init(&hw);
     chordMachine.Init(samplerate);
     rootMachine.Init(samplerate);
-    
-    tickFrequency   = 3.f;
-
-    seqOsc.Init(samplerate);
-    env.Init(samplerate);
-    tick.Init(3, samplerate);
-    flt.Init(samplerate);
-
-
-    //Osc parameters
-    seqOsc.SetWaveform(seqOsc.WAVE_TRI);
-
-    //Envelope parameters
-    env.SetTime(ADENV_SEG_ATTACK, 0.02);
-    env.SetMin(0.0);
-    env.SetMax(0.8);
-
-    //Set filter parameters
-    flt.SetFreq(10000.f);
-    flt.SetRes(0.7);
-
-
-    for(int i = 0; i < 8; i++)
-    {
-        dec[i]    = .5;
-        seqActive[i] = true;
-        seqPitches[i]  = 60;
-    }
+    seqMachine.Init(samplerate);
 
     // Start the controls
     controls.Start();
@@ -143,17 +84,11 @@ int main(void)
 void SetActiveSeqStep() {
     bool newPress = controls.ProcessDegreeButtons();
 
-    uint8_t activeButton = controls.GetActiveDegreeButton();
     if (newPress) {
-        if (seqStep == activeButton) { //indicates a re-press
-            seqActive[seqStep] = !seqActive[seqStep]; // flip if the step is seqActive
-            editCycle = seqActive[seqStep]; // align edit cycle with the seqActive level
-        } else if (activeButton < 8) { // not a repress, but the button is valid (button is pressed)
-            controls.SetDegreeLED(seqStep, false);
-            seqStep = activeButton;
-            controls.SetDegreeLED(seqStep, true);
-            editCycle = seqActive[seqStep]; // align edit cycle with the seqActive level
-        }
+        uint8_t activeButton = controls.GetActiveDegreeButton();
+        controls.TurnOffDegreeLEDs();
+        controls.SetDegreeLED(activeButton, true);
+        seqMachine.SetActiveSeqStep(activeButton);
     }
 }
 
@@ -210,33 +145,27 @@ void ProcessMode() {
 
     // only if one of the buttons is pressed (implies mode change)
     controls.TurnOffAllLEDs();
-    editCycle = false;
-    seqStep = 0;
+    seqMachine.SetEditCycle(false);
     if (state.free == FREE_CHORD) {
         controls.SetFreePlayLED(true);
     }
     if (state.seq == SEQ_PLAY) {
         controls.SetSeqLED(true);
-        controls.SetDegreeLED(seqStep, true);
+        controls.SetDegreeLED(seqMachine.GetActiveStep(), true);
     }
     if (state.seq == SEQ_EDIT) {
-        editCycle = seqActive[seqStep];
-        controls.SetDegreeLED(seqStep, true);
+        seqMachine.TurnOnEditMode();
+        controls.SetDegreeLED(seqMachine.GetActiveStep(), true);
     }
 }
 
 void UpdateSequencerParams() {
     if (state.seq == SEQ_EDIT) {
-        seqPitches[seqStep] += controls.GetEncoderIncrement();
-        seqOsc.SetFreq(mtof(seqPitches[seqStep]));
+        seqMachine.IncrementActivePitch(controls.GetEncoderIncrement());
     } else if (state.seq == SEQ_PLAY) {
-        tickFrequency += controls.GetEncoderIncrement();
-        if (tickFrequency < 1) {
-            tickFrequency = 1.0;
-        }
-        tick.SetFreq(tickFrequency);
+        seqMachine.IncrementTickFrequency(controls.GetEncoderIncrement());
     }
-    flt.SetFreq(controls.GetFilterFrequency());
+    seqMachine.SetFilterFrequencer(controls.GetFilterFrequency());
 }
 
 void UpdateControls()
@@ -252,36 +181,13 @@ void UpdateControls()
         }
     }
 
+    uint8_t prevSeqLed = seqMachine.GetActiveStep();
+    if (state.seq == SEQ_PLAY && seqMachine.ProcessMetronome()) {
+        controls.SetDegreeLED(prevSeqLed, false);
+        controls.SetDegreeLED(seqMachine.GetActiveStep(), true);
+    } else if (state.seq == SEQ_EDIT) {
+        seqMachine.ProcessEdit();
+    }
+
     ProcessNewInstrumentButton();
-}
-
-
-void NextSamples(float &sig)
-{
-    env_out = env.Process();
-    seqOsc.SetAmp(env_out);
-    sig = seqOsc.Process();
-    sig = flt.Process(sig);
-
-    if(tick.Process() && state.seq == SEQ_PLAY)
-    {
-        controls.SetDegreeLED(seqStep, false);
-        seqStep++;
-        seqStep %= 8;
-        controls.SetDegreeLED(seqStep, true);
-        if(seqActive[seqStep])
-        {
-            env.Trigger();
-        }
-    }
-
-    if(seqActive[seqStep])
-    {
-        env.SetTime(ADENV_SEG_DECAY, dec[seqStep]);
-        seqOsc.SetFreq(mtof(seqPitches[seqStep]));
-    }
-    if(!env.IsRunning() && editCycle)
-    {
-        env.Trigger();
-    }
 }

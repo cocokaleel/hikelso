@@ -9,6 +9,7 @@ CPP_SOURCES += HiKelso_Controls.cpp
 CPP_SOURCES += HiKelso_State.cpp
 CPP_SOURCES += FreeChord.cpp
 CPP_SOURCES += FreeRoot.cpp
+CPP_SOURCES += Sequencer.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy
