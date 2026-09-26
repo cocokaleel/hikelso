@@ -2,6 +2,9 @@
 #include "daisysp.h"
 #include "HiKelso_Controls.h"
 #include "HiKelso_State.h"
+#include "FreeChord.h"
+#include "FreeRoot.h"
+
 // #include "moogladder.h"
 
 using namespace daisy;
@@ -32,15 +35,13 @@ int                 activeDegree = 8;
 Oscillator          osc[4];
 uint8_t             oscNum;
 int                 notes[4];
-int                 chord[NUM_CHORDS][NUM_DEGREES];
 int                 chordNum = 0;
-int                 majorFrequencies[8] = {0, 2, 4, 5, 7, 9, 11, 12};
-int                 frequencies[8] = {0, 2, 4, 5, 7, 9, 11, 12};
-Chord_Flavors       defaultChord[8] = {Maj, Minor, Minor, Maj, Maj, Minor, Dim, Maj};
-int                 root = 48;
 float               tickFrequency;
 HiKelso_Controls    controls;
 HiKelso_State       state;
+FreeChord           chordMachine;
+FreeRoot            rootMachine;
+uint8_t             joystickSector;
 
 bool    editCycle;
 uint8_t seqStep;
@@ -61,11 +62,6 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
 {
     UpdateControls();
 
-    for(int i = 0; i < 4; i++)
-    {
-        osc[i].SetFreq(mtof(notes[i]));
-    }
-
     // Audio Loop
     for(size_t i = 0; i < size; i += 2)
     {
@@ -73,51 +69,16 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
         if (state.seq == SEQ_EDIT || state.seq == SEQ_PLAY) {
             NextSamples(sig);
         }
-        for(int i = 0; i < 4; i++)
-        {
-            sig += osc[i].Process();
+        if (state.free == FREE_CHORD) {
+            sig += chordMachine.GetSamples();
+        }
+        if (state.free == FREE_ROOT) {
+            sig += rootMachine.GetSamples();
         }
 
         out[i]     = sig;
         out[i + 1] = sig;
     }
-}
-
-void InitSynth(float samplerate)
-{
-    oscNum = Oscillator::WAVE_SIN;
-    for(int i = 0; i < 4; i++)
-    {
-        osc[i].Init(samplerate);
-        osc[i].SetAmp(0.0f);
-        osc[i].SetWaveform(oscNum);
-        notes[i] = 60;
-    }
-}
-
-void InitChords()
-{
-    //set thirds
-    chord[Maj][THIRD] = chord[Maj7][THIRD] = chord[dom7][THIRD] = chord[Aug][THIRD] = 4;
-    chord[Minor][THIRD] = chord[Dim][THIRD] = chord[min7][THIRD] = chord[dim7][THIRD] = 3;
-    
-    //set fifths
-    // perfect 5th
-    chord[Maj][FIFTH] = chord[Minor][FIFTH] = chord[Maj7][FIFTH] = chord[min7][FIFTH] = chord[dom7][FIFTH] = 7;
-    // diminished 5th
-    chord[Dim][FIFTH] = chord[dim7][FIFTH] = 6;
-    // augmented 5th
-    chord[Aug][FIFTH] = 8;
-
-    //set sevenths
-    // triads (octave since triad has no 7th)
-    chord[Maj][SEVENTH] = chord[Minor][SEVENTH] = chord[Aug][SEVENTH] = chord[Dim][SEVENTH] = 12;
-    // major 7th
-    chord[Maj7][SEVENTH] = 11;
-    // minor 7th
-    chord[min7][SEVENTH] = chord[dom7][SEVENTH] = 10;
-    // diminished 7th
-    chord[dim7][SEVENTH] = 9;
 }
 
 int main(void)
@@ -129,8 +90,9 @@ int main(void)
     hw.SetAudioBlockSize(4);
     samplerate = hw.AudioSampleRate();
     controls.Init(&hw);
-    InitSynth(samplerate);
-    InitChords();
+    chordMachine.Init(samplerate);
+    rootMachine.Init(samplerate);
+    
     tickFrequency   = 3.f;
 
     seqOsc.Init(samplerate);
@@ -178,31 +140,6 @@ int main(void)
     }
 }
 
-void UpdateChord()
-{
-    uint8_t joystickSector = controls.GetJoystickAngleNumber();
-    chordNum = (joystickSector >= 8 && activeDegree < 8) ? defaultChord[activeDegree] : joystickSector;
-
-    // if the joystick is moved during free root playing, change the third, fifth, and seventh to the chord degrees
-    if (state.free == FREE_ROOT && joystickSector <= 8) {
-
-        frequencies[2] = chord[chordNum][THIRD];
-        frequencies[4] = chord[chordNum][FIFTH];
-
-        switch(chordNum) {
-            case Maj7:
-            case min7:
-            case dim7:
-            case dom7:
-                frequencies[6] = chord[chordNum][SEVENTH];
-            break;
-            default:
-                frequencies[6] = chord[Maj7][SEVENTH];
-            break;
-        }
-    }   
-}
-
 void SetActiveSeqStep() {
     bool newPress = controls.ProcessDegreeButtons();
 
@@ -222,26 +159,31 @@ void SetActiveSeqStep() {
 
 void SetVolumeAndDegree() {
     controls.ProcessDegreeButtons();
-
+    uint8_t newJoystickSector = controls.GetJoystickAngleNumber();
     uint8_t activeButton = controls.GetActiveDegreeButton();
-    if (activeDegree != activeButton) {
+
+        // shift root
+    int encoderInc = controls.GetEncoderIncrement();
+    if (activeDegree != activeButton || newJoystickSector != joystickSector || encoderInc != 0) {
+        rootMachine.ShiftRoot(encoderInc);
+        chordMachine.ShiftRoot(encoderInc);
+        
         controls.SetDegreeLED(activeDegree, false);
         activeDegree = activeButton;
+        joystickSector = newJoystickSector;
         if (activeButton < 8) {
             controls.SetDegreeLED(activeDegree, true);
             // a button other than the active button is pressed
             if (state.free == FREE_CHORD) {
-                for(int i = 0; i < 4; i++) // turn on all oscs
-                {
-                    osc[i].SetAmp(0.1);
-                }
+                chordMachine.SetDegreePressed(activeDegree, joystickSector);
             } else if (state.free == FREE_ROOT) {
-                osc[0].SetAmp(0.4); // turn on root osc
+                rootMachine.SetDegreePressed(activeDegree, joystickSector);
             }
         } else { // no button is actively pressed
-            for(int i = 0; i < 4; i++) // turn off all oscs
-            {
-                osc[i].SetAmp(0);
+            if (state.free == FREE_CHORD) {
+                chordMachine.ClearPress();
+            } else if (state.free == FREE_ROOT) {
+                rootMachine.ClearPress();
             }
         }
     }
@@ -249,10 +191,10 @@ void SetVolumeAndDegree() {
 
 void ProcessNewInstrumentButton() {
     if (controls.NewInstrumentRequested()) {
-        oscNum = oscNum == (Oscillator::WAVE_LAST-1) ? 0 : (oscNum+1);
-        for(int i = 0; i < 4; i++)
-        {
-            osc[i].SetWaveform(oscNum);
+        if (state.free == FREE_CHORD) {
+            chordMachine.IncrementInstrument();
+        } else if (state.free == FREE_ROOT) {
+            rootMachine.IncrementInstrument();
         }
     }
 }
@@ -300,21 +242,10 @@ void UpdateSequencerParams() {
 void UpdateControls()
 {
     ProcessMode();
-    if (state.free != FREE_INACTIVE) {
+    if (state.mode == FREE) {
         SetVolumeAndDegree();
-        UpdateChord();
-        // shift root
-        root += controls.GetEncoderIncrement();
-
-        if (activeDegree < 8) {
-            freq = root+frequencies[activeDegree];
-            notes[0] = freq;
-            notes[1] = freq + chord[chordNum][0];
-            notes[2] = freq + chord[chordNum][1];
-            notes[3] = freq + chord[chordNum][2];
-        }
     }
-    if (state.free == FREE_INACTIVE) {
+    if (state.mode == SEQ) {
         UpdateSequencerParams();
         if (state.seq == SEQ_EDIT) {
             SetActiveSeqStep();
