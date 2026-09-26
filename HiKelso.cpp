@@ -22,7 +22,9 @@ Sequencer           seqMachine;
 
 void UpdateControls();
 void ProcessNewInstrumentButton();
-void SetVolumeAndDegree();
+void FreePlayControls();
+void SequencerControls();
+void ProcessMode();
 
 static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
                           AudioHandle::InterleavingOutputBuffer out,
@@ -67,7 +69,6 @@ int main(void)
     hw.StartAudio(AudioCallback);
 
     controls.SetFreePlayLED(true);
-    hw.StartLog();
 
     while(1) {
         if (state.seq == SEQ_EDIT) {
@@ -81,18 +82,7 @@ int main(void)
     }
 }
 
-void SetActiveSeqStep() {
-    bool newPress = controls.ProcessDegreeButtons();
-
-    if (newPress) {
-        uint8_t activeButton = controls.GetActiveDegreeButton();
-        controls.TurnOffDegreeLEDs();
-        controls.SetDegreeLED(activeButton, true);
-        seqMachine.SetActiveSeqStep(activeButton);
-    }
-}
-
-void SetVolumeAndDegree() {
+void FreePlayControls() {
     controls.ProcessDegreeButtons();
     uint8_t newJoystickSector = controls.GetJoystickAngleNumber();
     uint8_t activeButton = controls.GetActiveDegreeButton();
@@ -159,9 +149,16 @@ void ProcessMode() {
     }
 }
 
-void UpdateSequencerParams() {
+void SequencerControls() {
     if (state.seq == SEQ_EDIT) {
+        if (controls.ProcessDegreeButtons()) { //true when a new press detected
+            uint8_t activeButton = controls.GetActiveDegreeButton();
+            controls.TurnOffDegreeLEDs();
+            controls.SetDegreeLED(activeButton, true);
+            seqMachine.SetActiveSeqStep(activeButton);
+        }
         seqMachine.IncrementActivePitch(controls.GetEncoderIncrement());
+        seqMachine.ProcessEdit();
     } else if (state.seq == SEQ_PLAY) {
         seqMachine.IncrementTickFrequency(controls.GetEncoderIncrement());
     }
@@ -172,21 +169,16 @@ void UpdateControls()
 {
     ProcessMode();
     if (state.mode == FREE) {
-        SetVolumeAndDegree();
+        FreePlayControls();
     }
     if (state.mode == SEQ) {
-        UpdateSequencerParams();
-        if (state.seq == SEQ_EDIT) {
-            SetActiveSeqStep();
-        }
+        SequencerControls();
     }
 
     uint8_t prevSeqLed = seqMachine.GetActiveStep();
     if (state.seq == SEQ_PLAY && seqMachine.ProcessMetronome()) {
         controls.SetDegreeLED(prevSeqLed, false);
         controls.SetDegreeLED(seqMachine.GetActiveStep(), true);
-    } else if (state.seq == SEQ_EDIT) {
-        seqMachine.ProcessEdit();
     }
 
     ProcessNewInstrumentButton();
