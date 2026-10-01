@@ -3,38 +3,38 @@
 #include <math.h>
 
 void HiKelso_Controls::InitDegreeButtons() {
-    degreeButtons[0].Init(D28);
-    degreeButtons[1].Init(D27);
-    degreeButtons[2].Init(D26);
-    degreeButtons[3].Init(D25);
-    degreeButtons[4].Init(D24);
-    degreeButtons[5].Init(D23);
-    degreeButtons[6].Init(D22);
-    degreeButtons[7].Init(D13);
+    degreeButtons[0].Init(D19);
+    degreeButtons[1].Init(D21);
+    degreeButtons[2].Init(D3);
+    degreeButtons[3].Init(D5);
+    degreeButtons[4].Init(D28);
+    degreeButtons[5].Init(D26);
+    degreeButtons[6].Init(D24);
+    degreeButtons[7].Init(D2);
 }
 
 void HiKelso_Controls::InitDegreeLEDs() {
-    degreeLEDs[0].Init(D1, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[1].Init(D2, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[2].Init(D3, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[3].Init(D4, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[4].Init(D5, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[5].Init(D6, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[6].Init(D7, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    degreeLEDs[7].Init(D8, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[0].Init(D20, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[1].Init(D22, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[2].Init(D4, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[3].Init(D6, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[4].Init(D27, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[5].Init(D25, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[6].Init(D23, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    degreeLEDs[7].Init(D1, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
 
-    seqLED.Init(D10, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    freeLED.Init(D11, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    seqLED.Init(D11, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    freeLED.Init(D13, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
 }
 
 void HiKelso_Controls::InitChangeInstSwitch() {
-    changeInstSwitch.Init(D19);//,0, Switch::Type::TYPE_MOMENTARY, Switch::POLARITY_NORMAL, Switch::PULL_NONE);
+    // changeInstSwitch.Init(D19);//,0, Switch::Type::TYPE_MOMENTARY, Switch::POLARITY_NORMAL, Switch::PULL_NONE);
     freePlaySwitch.Init(D12);
-    seqModeSwitch.Init(D9);
+    seqModeSwitch.Init(D10);
 }
 
 void HiKelso_Controls::InitRootButtons() {
-    rootEncoder.Init(D18, D17, D16);
+    rootEncoder.Init(D7, D8, D9); // TODO: change instrument switch is root encoder button
 }
 
 void HiKelso_Controls::SetFreePlayLED(bool on) {
@@ -88,9 +88,9 @@ uint8_t HiKelso_Controls::GetJoystickAngleNumber() {
 
 void HiKelso_Controls::InitADCs() {
     //Configure pin 21 as an ADC input. This is where we'll read the knob.
-    adcInputs[0].InitSingle(D21);//joystick x
-    adcInputs[1].InitSingle(D20);//joystick y
-    adcInputs[2].InitSingle(D15);
+    adcInputs[0].InitSingle(D16);//joystick x
+    adcInputs[1].InitSingle(D15);//joystick y
+    adcInputs[2].InitSingle(D17);
 
     //Initialize the adc with the config we just made
     hardware->adc.Init(adcInputs, 3);
@@ -100,8 +100,11 @@ void HiKelso_Controls::InitADCs() {
 
 
 bool HiKelso_Controls::NewInstrumentRequested() {
-    changeInstSwitch.Debounce();
-    return changeInstSwitch.FallingEdge();
+    // rootEncoder.Debounce(); // Debounce likely not needed because happens when checking increment
+    return rootEncoder.FallingEdge();
+
+    // changeInstSwitch.Debounce();
+    // return changeInstSwitch.FallingEdge();
 }
 
 bool HiKelso_Controls::GetFreePlaySwitchPressed() {
