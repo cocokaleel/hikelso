@@ -105,3 +105,8 @@ void Sequencer::SetFilterFrequencer(float freq) {
 void Sequencer::SetEditCycle(bool newEditCycle) {
     editCycle = newEditCycle;
 }
+
+
+void Sequencer::IncrementInstrument() {
+    
+}
