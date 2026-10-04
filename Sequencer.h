@@ -1,5 +1,6 @@
 #include "daisy_pod.h"
 #include "daisysp.h"
+#include "SequencerSounds.h"
 // #include "moogladder.h"
 
 using namespace daisy;
@@ -7,6 +8,13 @@ using namespace daisysp;
 using namespace seed;
 
 class Sequencer {
+    enum SoundIndex {
+        SOUND_SINE,
+        SOUND_BASS,
+        SOUND_SNARE,
+        SOUND_MAX
+    };
+
     public:
         void Init(float samplerate);
         void IncrementInstrument();
@@ -21,15 +29,11 @@ class Sequencer {
         void SetEditCycle(bool newEditCycle);
         void TurnOnEditMode();
     private:
-        Oscillator          seqOsc;
-        AdEnv               env;
         Metro               tick;
-        bool    editCycle;
-        uint8_t seqStep;
-        uint8_t wave;
-        float   dec[8];
-        int     seqPitches[8];
-        bool    seqActive[8];
+        bool                editCycle;
+        uint8_t             seqStep;
+        SequencerSound      soundLine[3];
+        uint8_t             activeEditingSoundLine;
         MoogLadder          flt;
         float               tickFrequency;
 };

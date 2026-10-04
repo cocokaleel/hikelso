@@ -4,37 +4,29 @@ void Sequencer::Init(float samplerate) {
 
     tickFrequency   = 3.f;
 
-    seqOsc.Init(samplerate);
-    env.Init(samplerate);
     tick.Init(3, samplerate);
     flt.Init(samplerate);
-
-
-    //Osc parameters
-    seqOsc.SetWaveform(seqOsc.WAVE_TRI);
-
-    //Envelope parameters
-    env.SetTime(ADENV_SEG_ATTACK, 0.02);
-    env.SetMin(0.0);
-    env.SetMax(0.8);
 
     //Set filter parameters
     flt.SetFreq(10000.f);
     flt.SetRes(0.7);
 
+    soundLine[SOUND_SINE] = SequencerSine();
+    soundLine[SOUND_BASS] = SequencerBassDrum();
+    soundLine[SOUND_SNARE] = SequencerSnare();
 
-    for(int i = 0; i < 8; i++)
+    for(int i = 0; i < SOUND_MAX; i++)
     {
-        dec[i]    = .5;
-        seqActive[i] = true;
-        seqPitches[i]  = 60;
+        soundLine[i].Init(samplerate);
     }
+
+    activeEditingSoundLine = 0;
 }
 
 void Sequencer::ProcessEdit() {
-    if(!env.IsRunning() && editCycle)
+    if(editCycle)
     {
-        env.Trigger();
+        soundLine[activeEditingSoundLine].Trigger(false);
     }
 }
 
@@ -43,14 +35,10 @@ bool Sequencer::ProcessMetronome() {
         seqStep++;
         seqStep %= 8;
 
-        if(seqActive[seqStep])
-        {
-            env.Trigger();
-        }
-        if(seqActive[seqStep])
-        {
-            env.SetTime(ADENV_SEG_DECAY, dec[seqStep]);
-            seqOsc.SetFreq(mtof(seqPitches[seqStep]));
+        for (int i = 0; i < SOUND_MAX; i++) {
+            if (soundLine[i].GetActive(seqStep)) {
+                soundLine[i].Trigger(true);
+            }
         }
         return true;
     }
@@ -58,10 +46,13 @@ bool Sequencer::ProcessMetronome() {
 }
 
 float Sequencer::GetSample() {
-    float sig;
+    float sig = 0;
 
-    seqOsc.SetAmp(env.Process());
-    sig = seqOsc.Process();
+    for (int i = 0; i < SOUND_MAX; i++) {
+        // calculate this 0.33 from SOUND_MAX
+        sig += 0.33 * soundLine[i].GetSample();
+    }
+
     sig = flt.Process(sig);
 
     return sig;
@@ -73,16 +64,17 @@ uint8_t Sequencer::GetActiveStep() {
 
 void Sequencer::SetActiveSeqStep(uint8_t buttonPressed) {
     if (seqStep == buttonPressed) { //indicates a re-press
-        seqActive[seqStep] = !seqActive[seqStep]; // flip if the step is seqActive
-        editCycle = seqActive[seqStep]; // align edit cycle with the seqActive level
+        soundLine[activeEditingSoundLine].ToggleActive(seqStep); // flip if the step is seqActive
+        editCycle = soundLine[activeEditingSoundLine].GetActive(seqStep); // align edit cycle with the seqActive level
     } else if (buttonPressed < 8) { // not a repress, but the button is valid (button is pressed)
         seqStep = buttonPressed;
-        editCycle = seqActive[seqStep]; // align edit cycle with the seqActive level
+        editCycle = soundLine[activeEditingSoundLine].GetActive(seqStep); // align edit cycle with the seqActive level
     }
 }
 
 void Sequencer::TurnOnEditMode() {
-    editCycle = seqActive[seqStep];
+    editCycle = soundLine[activeEditingSoundLine].GetActive(seqStep);
+    // editCycle = seqActive[seqStep];
 }
 
 void Sequencer::IncrementTickFrequency(int increment) {
@@ -94,8 +86,9 @@ void Sequencer::IncrementTickFrequency(int increment) {
 }
 
 void Sequencer::IncrementActivePitch(int increment) {
-    seqPitches[seqStep] += increment;
-    seqOsc.SetFreq(mtof(seqPitches[seqStep]));
+    // seqPitches[seqStep] += increment;
+    // seqOsc.SetFreq(mtof(seqPitches[seqStep]));
+    //TODO: what does increment mean in this world??
 }
 
 void Sequencer::SetFilterFrequencer(float freq) {
@@ -108,5 +101,8 @@ void Sequencer::SetEditCycle(bool newEditCycle) {
 
 
 void Sequencer::IncrementInstrument() {
-    
+    activeEditingSoundLine++;
+    if (activeEditingSoundLine >= SOUND_MAX) {
+        activeEditingSoundLine = SOUND_SINE;
+    }
 }
