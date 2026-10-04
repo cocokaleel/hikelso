@@ -14,10 +14,12 @@ class FreeChord {
         void SetDegreePressed(int degree, uint8_t joystickSector);
         void ClearPress();
         float GetSamples();
+        void SetFilterFrequencer(float freq);
 
     private:
         Oscillator          osc[4];
         uint8_t             oscNum;
         int                 root = 48;
         Scales              scales;
+        MoogLadder          flt;
 };

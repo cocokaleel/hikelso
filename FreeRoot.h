@@ -13,6 +13,7 @@ class FreeRoot {
         void SetDegreePressed(int degree, uint8_t joystickSector);
         void ClearPress();
         float GetSamples();
+        void SetFilterFrequencer(float freq);
 
     private:
         Oscillator          osc;
@@ -21,4 +22,5 @@ class FreeRoot {
         int                 chordNum = 0;
         int                 root = 48;
         Scales              scales;
+        MoogLadder          flt;
 };

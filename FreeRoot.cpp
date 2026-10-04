@@ -5,6 +5,10 @@ void FreeRoot::Init(float samplerate) {
     osc.Init(samplerate);
     osc.SetAmp(0.0f);
     osc.SetWaveform(oscNum);
+    //Set filter parameters
+    flt.Init(samplerate);
+    flt.SetFreq(10000.f);
+    flt.SetRes(0.7);
 }
 
 void FreeRoot::SetDegreePressed(int degree, uint8_t joystickSector) {
@@ -23,6 +27,11 @@ void FreeRoot::ClearPress() {
 }
 
 
+void FreeRoot::SetFilterFrequencer(float freq) {
+    flt.SetFreq(freq);
+}
+
+
 void FreeRoot::IncrementInstrument() {
     oscNum = oscNum == (Oscillator::WAVE_LAST-1) ? 0 : (oscNum+1);
     osc.SetWaveform(oscNum);
@@ -35,5 +44,5 @@ void FreeRoot::ShiftRoot(int shift) {
 
 
 float FreeRoot::GetSamples() {
-    return osc.Process();
+    return flt.Process(osc.Process());;
 }

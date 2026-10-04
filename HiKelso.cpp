@@ -112,6 +112,14 @@ void FreePlayControls() {
             }
         }
     }
+
+    // set filter
+    if (state.free == FREE_CHORD) {
+        chordMachine.SetFilterFrequencer(controls.GetFilterFrequency());
+
+    } else if (state.free == FREE_ROOT) {
+        rootMachine.SetFilterFrequencer(controls.GetFilterFrequency());
+    }
 }
 
 void ProcessNewInstrumentButton() {

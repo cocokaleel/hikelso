@@ -8,6 +8,10 @@ void FreeChord::Init(float samplerate) {
         osc[i].SetAmp(0.0f);
         osc[i].SetWaveform(oscNum);
     }
+    //Set filter parameters
+    flt.Init(samplerate);
+    flt.SetFreq(10000.f);
+    flt.SetRes(0.7);
 }
 
 void FreeChord::IncrementInstrument() {
@@ -56,6 +60,9 @@ void FreeChord::ClearPress() {
     }
 }
 
+void FreeChord::SetFilterFrequencer(float freq) {
+    flt.SetFreq(freq);
+}
 
 void FreeChord::ShiftRoot(int shift) {
     root += shift;
@@ -63,5 +70,5 @@ void FreeChord::ShiftRoot(int shift) {
 
 
 float FreeChord::GetSamples() {
-    return osc[0].Process() + osc[1].Process() + osc[2].Process() + osc[3].Process();
+    return flt.Process(osc[0].Process() + osc[1].Process() + osc[2].Process() + osc[3].Process());
 }
