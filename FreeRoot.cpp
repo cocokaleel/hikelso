@@ -19,7 +19,7 @@ void FreeRoot::SetDegreePressed(int degree, uint8_t joystickSector) {
         flavor = (Scales::Scale_Flavors)joystickSector;
     }
     osc.SetFreq(mtof(root+scales.getPitch(flavor, (Scales::Scale_Degree)degree)));
-    osc.SetAmp(0.4);
+    osc.SetAmp(1);
 }
 
 void FreeRoot::ClearPress() {

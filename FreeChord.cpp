@@ -49,7 +49,7 @@ void FreeChord::SetDegreePressed(int degree, uint8_t joystickSector) {
 
     for(int i = 0; i < 4; i++) // turn on all oscs
     {
-        osc[i].SetAmp(0.1);
+        osc[i].SetAmp(0.25);
     }
 }
 

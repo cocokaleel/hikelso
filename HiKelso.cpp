@@ -37,13 +37,12 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     {
         float sig = 0;
         if (state.seq == SEQ_EDIT || state.seq == SEQ_PLAY) {
-            sig += seqMachine.GetSample();
+            sig += 0.5 * seqMachine.GetSample();
         }
         if (state.free == FREE_CHORD) {
-            sig += chordMachine.GetSamples();
-        }
-        if (state.free == FREE_ROOT) {
-            sig += rootMachine.GetSamples();
+            sig += 0.5 * chordMachine.GetSamples();
+        } else if (state.free == FREE_ROOT) {
+            sig += 0.5 * rootMachine.GetSamples();
         }
 
         out[i]     = sig;

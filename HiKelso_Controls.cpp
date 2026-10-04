@@ -27,14 +27,13 @@ void HiKelso_Controls::InitDegreeLEDs() {
     freeLED.Init(D13, GPIO::Mode::OUTPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
 }
 
-void HiKelso_Controls::InitChangeInstSwitch() {
-    // changeInstSwitch.Init(D19);//,0, Switch::Type::TYPE_MOMENTARY, Switch::POLARITY_NORMAL, Switch::PULL_NONE);
+void HiKelso_Controls::InitModeSwitches() {
     freePlaySwitch.Init(D12);
     seqModeSwitch.Init(D10);
 }
 
 void HiKelso_Controls::InitRootButtons() {
-    rootEncoder.Init(D7, D8, D9); // TODO: change instrument switch is root encoder button
+    rootEncoder.Init(D8, D7, D9);
 }
 
 void HiKelso_Controls::SetFreePlayLED(bool on) {
@@ -67,7 +66,7 @@ void HiKelso_Controls::TurnOffDegreeLEDs() {
 
 void HiKelso_Controls::Init(DaisySeed *hw) {
     hardware = hw;
-    InitChangeInstSwitch();
+    InitModeSwitches();
     InitDegreeButtons();
     InitDegreeLEDs();
     InitRootButtons();

@@ -72,7 +72,7 @@ class HiKelso_Controls {
     private:
         void InitDegreeButtons();
         void InitDegreeLEDs();
-        void InitChangeInstSwitch();
+        void InitModeSwitches();
         void InitRootButtons();
         void InitADCs();
 
