@@ -58,6 +58,11 @@ class SequencerBassDrum : public SequencerSound {
         SequencerBassDrum(){}
 
         void Init(float samplerate) {
+            //Initialize oscillator for kickdrum
+            osc.Init(samplerate);
+            osc.SetWaveform(Oscillator::WAVE_TRI);
+            osc.SetAmp(1);
+
             //This envelope will control the kick oscillator's pitch
             //Note that this envelope is much faster than the volume
             kickPitchEnv.Init(samplerate);
@@ -100,6 +105,9 @@ class SequencerSnare : public SequencerSound {
     public:
         SequencerSnare(){}
         void Init(float samplerate) {
+            //Initialize noise
+            noise.Init();
+            
             //Initialize envelopes, this one's for the snare amplitude
             snareEnv.Init(samplerate);
             snareEnv.SetTime(ADENV_SEG_ATTACK, .01);
