@@ -168,10 +168,11 @@ void SequencerControls() {
         }
         seqMachine.IncrementActivePitch(controls.GetEncoderIncrement());
         seqMachine.ProcessEdit();
+        //TODO: add processing so that the controls only updates if filter is new
+        seqMachine.SetFilterFrequencer(controls.GetFilterFrequency());
     } else if (state.seq == SEQ_PLAY) {
         seqMachine.IncrementTickFrequency(controls.GetEncoderIncrement());
     }
-    seqMachine.SetFilterFrequencer(controls.GetFilterFrequency());
 }
 
 void UpdateControls()

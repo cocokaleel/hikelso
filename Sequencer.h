@@ -34,6 +34,5 @@ class Sequencer {
         uint8_t             seqStep;
         SequencerSound      *soundLine[3];
         uint8_t             activeEditingSoundLine;
-        MoogLadder          flt;
         float               tickFrequency;
 };

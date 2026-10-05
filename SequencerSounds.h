@@ -10,10 +10,11 @@ class SequencerSound {
         virtual void Init(float samplerate);
         virtual void Trigger(bool overrideRunning);
         virtual float GetSample();
+        virtual void SetFilter(float freq);
         void ToggleActive(uint8_t step) {active[step] = !active[step];}
         bool GetActive(uint8_t step) {return active[step];}
     private:
-        bool active[8];
+        bool active[8] = {false};
 };
 
 class SequencerSine : public SequencerSound {
@@ -21,6 +22,11 @@ class SequencerSine : public SequencerSound {
         SequencerSine(){}
 
         void Init(float samplerate) {
+            flt.Init(samplerate);
+
+            //Set filter parameters
+            flt.SetFreq(10000.f);
+            flt.SetRes(0.7);
             seqOsc.Init(samplerate);
             env.Init(samplerate);
             //Osc parameters
@@ -41,16 +47,16 @@ class SequencerSine : public SequencerSound {
             }
         }
         float GetSample() {
-            float sig;
-
             seqOsc.SetAmp(env.Process());
-            sig = seqOsc.Process();
-
-            return sig;
+            return flt.Process(seqOsc.Process());
+        }
+        void SetFilter(float freq) {
+            flt.SetFreq(freq);
         }
     private:
         Oscillator          seqOsc;
         AdEnv               env;
+        MoogLadder          flt;
 };
 
 class SequencerBassDrum : public SequencerSound {
@@ -58,6 +64,11 @@ class SequencerBassDrum : public SequencerSound {
         SequencerBassDrum(){}
 
         void Init(float samplerate) {
+            flt.Init(samplerate);
+
+            //Set filter parameters
+            flt.SetFreq(10000.f);
+            flt.SetRes(0.7);
             //Initialize oscillator for kickdrum
             osc.Init(samplerate);
             osc.SetWaveform(Oscillator::WAVE_TRI);
@@ -93,21 +104,30 @@ class SequencerBassDrum : public SequencerSound {
             //Set the kick volume to the envelope's output
             osc.SetAmp(kickVolEnv.Process());
             //Process the next oscillator sample
-            return osc.Process();
+            return flt.Process(osc.Process());
+        }
+        void SetFilter(float freq) {
+            flt.SetFreq(freq);
         }
 
     private:
         AdEnv kickVolEnv, kickPitchEnv;
         Oscillator osc;
+        MoogLadder          flt;
 };
 
 class SequencerSnare : public SequencerSound {
     public:
         SequencerSnare(){}
         void Init(float samplerate) {
+            flt.Init(samplerate);
+
+            //Set filter parameters
+            flt.SetFreq(10000.f);
+            flt.SetRes(0.7);
             //Initialize noise
             noise.Init();
-            
+
             //Initialize envelopes, this one's for the snare amplitude
             snareEnv.Init(samplerate);
             snareEnv.SetTime(ADENV_SEG_ATTACK, .01);
@@ -122,8 +142,12 @@ class SequencerSnare : public SequencerSound {
                 snareEnv.Trigger();
             }
         }
-        float GetSample() {return noise.Process() * snareEnv.Process();}
+        float GetSample() {return flt.Process(noise.Process() * snareEnv.Process());}
+        void SetFilter(float freq) {
+            flt.SetFreq(freq);
+        }
     private:
         AdEnv snareEnv;
         WhiteNoise noise;
+        MoogLadder          flt;
 };

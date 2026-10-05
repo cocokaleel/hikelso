@@ -5,11 +5,6 @@ void Sequencer::Init(float samplerate) {
     tickFrequency   = 3.f;
 
     tick.Init(3, samplerate);
-    flt.Init(samplerate);
-
-    //Set filter parameters
-    flt.SetFreq(10000.f);
-    flt.SetRes(0.7);
 
     soundLine[SOUND_SINE] = new SequencerSine;
     soundLine[SOUND_BASS] = new SequencerBassDrum;
@@ -52,7 +47,6 @@ float Sequencer::GetSample() {
         // calculate this 0.33 from SOUND_MAX
         sig += 0.33 * soundLine[i]->GetSample();
     }
-    sig = flt.Process(sig);
 
     return sig;
 }
@@ -91,7 +85,7 @@ void Sequencer::IncrementActivePitch(int increment) {
 }
 
 void Sequencer::SetFilterFrequencer(float freq) {
-    flt.SetFreq(freq);
+    soundLine[activeEditingSoundLine]->SetFilter(freq);
 }
 
 void Sequencer::SetEditCycle(bool newEditCycle) {
