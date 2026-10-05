@@ -7,24 +7,29 @@ using namespace seed;
 
 class SequencerSound {
     public:
-        void Init(float samplerate) {}
-        void Trigger(bool overrideRunning) {return;}
-        float GetSample() {return 0.5;}
+        virtual void Init(float samplerate);
+        virtual void Trigger(bool overrideRunning);
+        virtual float GetSample();
         void ToggleActive(uint8_t step) {active[step] = !active[step];}
         bool GetActive(uint8_t step) {return active[step];}
     private:
-        bool active[8] = {true};
+        bool active[8];
 };
 
 class SequencerSine : public SequencerSound {
     public:
+        SequencerSine(){}
+
         void Init(float samplerate) {
+            seqOsc.Init(samplerate);
+            env.Init(samplerate);
             //Osc parameters
             seqOsc.SetWaveform(seqOsc.WAVE_TRI);
             seqOsc.SetFreq(mtof(60));
 
             //Envelope parameters
-            env.SetTime(ADENV_SEG_ATTACK, 0.5);
+            env.SetTime(ADENV_SEG_ATTACK, 0.02);
+            env.SetTime(ADENV_SEG_DECAY, 0.5);
             env.SetMin(0.0);
             env.SetMax(0.8);
         }
@@ -50,6 +55,8 @@ class SequencerSine : public SequencerSound {
 
 class SequencerBassDrum : public SequencerSound {
     public:
+        SequencerBassDrum(){}
+
         void Init(float samplerate) {
             //This envelope will control the kick oscillator's pitch
             //Note that this envelope is much faster than the volume
@@ -91,6 +98,7 @@ class SequencerBassDrum : public SequencerSound {
 
 class SequencerSnare : public SequencerSound {
     public:
+        SequencerSnare(){}
         void Init(float samplerate) {
             //Initialize envelopes, this one's for the snare amplitude
             snareEnv.Init(samplerate);

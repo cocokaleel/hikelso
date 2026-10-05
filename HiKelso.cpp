@@ -127,6 +127,8 @@ void ProcessNewInstrumentButton() {
             chordMachine.IncrementInstrument();
         } else if (state.free == FREE_ROOT) {
             rootMachine.IncrementInstrument();
+        } else if (state.mode == SEQ && state.seq == SEQ_EDIT) {
+            seqMachine.IncrementInstrument();
         }
     }
 }

@@ -32,7 +32,7 @@ class Sequencer {
         Metro               tick;
         bool                editCycle;
         uint8_t             seqStep;
-        SequencerSound      soundLine[3];
+        SequencerSound      *soundLine[3];
         uint8_t             activeEditingSoundLine;
         MoogLadder          flt;
         float               tickFrequency;
