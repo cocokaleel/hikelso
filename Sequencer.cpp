@@ -21,7 +21,7 @@ void Sequencer::Init(float samplerate) {
 void Sequencer::ProcessEdit() {
     if(editCycle)
     {
-        soundLine[activeEditingSoundLine]->Trigger(false);
+        soundLine[activeEditingSoundLine]->Trigger(false, seqStep);
     }
 }
 
@@ -32,7 +32,7 @@ bool Sequencer::ProcessMetronome() {
 
         for (int i = 0; i < SOUND_MAX; i++) {
             if (soundLine[i]->GetActive(seqStep)) {
-                soundLine[i]->Trigger(true);
+                soundLine[i]->Trigger(true, seqStep);
             }
         }
         return true;
@@ -79,9 +79,7 @@ void Sequencer::IncrementTickFrequency(int increment) {
 }
 
 void Sequencer::IncrementActivePitch(int increment) {
-    // seqPitches[seqStep] += increment;
-    // seqOsc.SetFreq(mtof(seqPitches[seqStep]));
-    //TODO: what does increment mean in this world??
+    soundLine[activeEditingSoundLine]->IncrementQuality(increment, seqStep);
 }
 
 void Sequencer::SetFilterFrequencer(float freq) {
