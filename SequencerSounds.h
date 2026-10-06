@@ -35,7 +35,7 @@ class SequencerSine : public SequencerSound {
             seqOsc.Init(samplerate);
             env.Init(samplerate);
             //Osc parameters
-            seqOsc.SetWaveform(seqOsc.WAVE_TRI);
+            seqOsc.SetWaveform(seqOsc.WAVE_SQUARE);
             seqOsc.SetFreq(mtof(60));
 
             //Envelope parameters

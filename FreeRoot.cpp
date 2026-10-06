@@ -33,7 +33,7 @@ void FreeRoot::SetFilterFrequencer(float freq) {
 
 
 void FreeRoot::IncrementInstrument() {
-    oscNum = oscNum == (Oscillator::WAVE_LAST-1) ? 0 : (oscNum+1);
+    oscNum = oscNum == (Oscillator::WAVE_SQUARE) ? 0 : (oscNum+1);
     osc.SetWaveform(oscNum);
 }
 

@@ -15,7 +15,7 @@ void FreeChord::Init(float samplerate) {
 }
 
 void FreeChord::IncrementInstrument() {
-    oscNum = oscNum == (Oscillator::WAVE_LAST-1) ? 0 : (oscNum+1);
+    oscNum = oscNum == (Oscillator::WAVE_SQUARE) ? 0 : (oscNum+1);
     for(int i = 0; i < 4; i++)
     {
         osc[i].SetWaveform(oscNum);
