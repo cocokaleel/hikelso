@@ -122,6 +122,10 @@ void HiKelso_Controls::SetDegreeLED(uint8_t i, bool on) {
     degreeLEDs[i].Write(on);   
 }
 
+void HiKelso_Controls::ToggleDegreeLED(uint8_t i) {
+    degreeLEDs[i].Toggle();
+}
+
 
 bool HiKelso_Controls::ProcessDegreeButtons() {
     bool newPress = false;

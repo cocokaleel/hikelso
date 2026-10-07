@@ -37,12 +37,12 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     {
         float sig = 0;
         if (state.seq == SEQ_EDIT || state.seq == SEQ_PLAY) {
-            sig += 0.5 * seqMachine.GetSample();
+            sig += 0.6 * seqMachine.GetSample();
         }
         if (state.free == FREE_CHORD) {
-            sig += 0.5 * chordMachine.GetSamples();
+            sig += 0.4 * chordMachine.GetSamples();
         } else if (state.free == FREE_ROOT) {
-            sig += 0.5 * rootMachine.GetSamples();
+            sig += 0.4 * rootMachine.GetSamples();
         }
 
         out[i]     = sig;
@@ -72,6 +72,11 @@ int main(void)
     while(1) {
         if (state.seq == SEQ_EDIT) {
             controls.ToggleSeqLED();
+            //TODO: if the active step
+            uint8_t activeStep = seqMachine.GetActiveStep();
+            if (seqMachine.GetStepActive(activeStep)) {
+                controls.ToggleDegreeLED(activeStep);
+            }
             System::Delay(200); 
         }
         if (state.free == FREE_ROOT) {
@@ -129,6 +134,10 @@ void ProcessNewInstrumentButton() {
             rootMachine.IncrementInstrument();
         } else if (state.mode == SEQ && state.seq == SEQ_EDIT) {
             seqMachine.IncrementInstrument();
+            controls.TurnOffDegreeLEDs();
+            for (int i = 0; i<8; i++) {
+                controls.SetDegreeLED(i, seqMachine.GetStepActive(i));
+            }
         }
     }
 }
@@ -154,7 +163,10 @@ void ProcessMode() {
     }
     if (state.seq == SEQ_EDIT) {
         seqMachine.TurnOnEditMode();
-        controls.SetDegreeLED(seqMachine.GetActiveStep(), true);
+        controls.TurnOffDegreeLEDs();
+        for (int i = 0; i<8; i++) {
+            controls.SetDegreeLED(i, seqMachine.GetStepActive(i));
+        }
     }
 }
 
@@ -163,8 +175,10 @@ void SequencerControls() {
         if (controls.ProcessDegreeButtons()) { //true when a new press detected
             uint8_t activeButton = controls.GetActiveDegreeButton();
             controls.TurnOffDegreeLEDs();
-            controls.SetDegreeLED(activeButton, true);
             seqMachine.SetActiveSeqStep(activeButton);
+            for (int i = 0; i<8; i++) {
+                controls.SetDegreeLED(i, seqMachine.GetStepActive(i));
+            }
         }
         seqMachine.IncrementActivePitch(controls.GetEncoderIncrement());
         seqMachine.ProcessEdit();

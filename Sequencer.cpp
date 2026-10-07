@@ -1,7 +1,8 @@
 #include "Sequencer.h"
 
 void Sequencer::Init(float samplerate) {
-
+    seqStep = 0;
+    
     tickFrequency   = 3.f;
 
     tick.Init(3, samplerate);
@@ -9,6 +10,7 @@ void Sequencer::Init(float samplerate) {
     soundLine[SOUND_SINE] = new SequencerSine;
     soundLine[SOUND_BASS] = new SequencerBassDrum;
     soundLine[SOUND_SNARE] = new SequencerSnare;
+    soundLine[SOUND_SAW] = new SequencerSaw;
 
     for(int i = 0; i < SOUND_MAX; i++)
     {
@@ -18,11 +20,8 @@ void Sequencer::Init(float samplerate) {
     activeEditingSoundLine = 0;
 }
 
-void Sequencer::ProcessEdit() {
-    if(editCycle)
-    {
-        soundLine[activeEditingSoundLine]->Trigger(false, seqStep);
-    }
+void Sequencer::ProcessEdit() { //Triggers no matter what - lights display if step on or off
+    soundLine[activeEditingSoundLine]->Trigger(false, seqStep);
 }
 
 bool Sequencer::ProcessMetronome() {
@@ -44,8 +43,8 @@ float Sequencer::GetSample() {
     float sig = 0;
 
     for (int i = 0; i < SOUND_MAX; i++) {
-        // calculate this 0.33 from SOUND_MAX
-        sig += 0.33 * soundLine[i]->GetSample();
+        // calculate this 0.25 from SOUND_MAX
+        sig += 0.25 * soundLine[i]->GetSample();
     }
 
     return sig;
@@ -56,18 +55,23 @@ uint8_t Sequencer::GetActiveStep() {
 }
 
 void Sequencer::SetActiveSeqStep(uint8_t buttonPressed) {
-    if (seqStep == buttonPressed) { //indicates a re-press
-        soundLine[activeEditingSoundLine]->ToggleActive(seqStep); // flip if the step is seqActive
-        editCycle = soundLine[activeEditingSoundLine]->GetActive(seqStep); // align edit cycle with the seqActive level
-            
-    } else if (buttonPressed < 8) { // not a repress, but the button is valid (button is pressed)
+    if (seqStep != buttonPressed && soundLine[activeEditingSoundLine]->GetActive(buttonPressed)) {
+        // first press of already active button should not toggle it off, just select it
         seqStep = buttonPressed;
-        editCycle = soundLine[activeEditingSoundLine]->GetActive(seqStep); // align edit cycle with the seqActive level
+    } else {
+        // otherwise, select the new button (doesn't matter if it's already set) and flip it
+        seqStep = buttonPressed;
+        soundLine[activeEditingSoundLine]->ToggleActive(seqStep); // flip if the step is seqActive
     }
 }
 
 void Sequencer::TurnOnEditMode() {
-    editCycle = soundLine[activeEditingSoundLine]->GetActive(seqStep);
+    editCycle = true;
+}
+
+
+bool Sequencer::GetStepActive(uint8_t step) {
+    return soundLine[activeEditingSoundLine]->GetActive(step);
 }
 
 void Sequencer::IncrementTickFrequency(int increment) {

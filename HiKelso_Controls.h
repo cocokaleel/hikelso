@@ -56,7 +56,7 @@ class HiKelso_Controls {
         uint8_t GetActiveDegreeButton();
 
         void SetDegreeLED(uint8_t i, bool on);
-
+        void ToggleDegreeLED(uint8_t i);
         void TurnOffAllLEDs();
         void TurnOffDegreeLEDs();
 

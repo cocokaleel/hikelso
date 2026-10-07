@@ -12,6 +12,7 @@ class Sequencer {
         SOUND_SINE,
         SOUND_BASS,
         SOUND_SNARE,
+        SOUND_SAW,
         SOUND_MAX
     };
 
@@ -20,6 +21,7 @@ class Sequencer {
         void IncrementInstrument();
         float GetSample();
         uint8_t GetActiveStep();
+        bool GetStepActive(uint8_t step);
         bool ProcessMetronome();
         void ProcessEdit();
         void SetActiveSeqStep(uint8_t buttonPressed);
@@ -32,7 +34,7 @@ class Sequencer {
         Metro               tick;
         bool                editCycle;
         uint8_t             seqStep;
-        SequencerSound      *soundLine[3];
+        SequencerSound      *soundLine[SOUND_MAX];
         uint8_t             activeEditingSoundLine;
         float               tickFrequency;
 };
