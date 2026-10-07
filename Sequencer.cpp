@@ -2,7 +2,7 @@
 
 void Sequencer::Init(float samplerate) {
     seqStep = 0;
-    
+
     tickFrequency   = 3.f;
 
     tick.Init(3, samplerate);
@@ -67,6 +67,7 @@ void Sequencer::SetActiveSeqStep(uint8_t buttonPressed) {
 
 void Sequencer::TurnOnEditMode() {
     editCycle = true;
+    seqStep = 0;
 }
 
 
@@ -96,6 +97,7 @@ void Sequencer::SetEditCycle(bool newEditCycle) {
 
 
 void Sequencer::IncrementInstrument() {
+    seqStep = 0;
     activeEditingSoundLine++;
     if (activeEditingSoundLine >= SOUND_MAX) {
         activeEditingSoundLine = SOUND_SINE;
